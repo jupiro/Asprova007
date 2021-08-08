@@ -15,9 +15,17 @@ struct KKT89
   KKT89(int r_len, int r_time, int id) : r_len(r_len), r_time(r_time), id(id) {}
 };
 
+uint32_t xor64(void)
+{
+  static uint64_t x = 88172645463325252ULL;
+  x = x ^ (x << 13); x = x ^ (x >> 7);
+  return x = x ^ (x << 17);
+}
 
+std::chrono::system_clock::time_point start, end;
 void solve()
 {
+  start = std::chrono::system_clock::now();
   int m, S, T, L; cin >> m >> S >> T >> L;
   std::vector t(m, std::vector<int>(S));
   for (int i = 0; i < m; ++i)
@@ -41,10 +49,11 @@ void solve()
     cin >> n[i];
   }
   std::vector<std::deque<KKT89>> vq(S);
+  std::vector<int> exe_idx(S);
   auto run = [&](const std::vector<int> &v)->int
   {
     int real_time = 0;
-    // int idle_time = 0;
+    int idle_time = 0;
     vq.clear(); vq.resize(S);
     int push_time = 0;
     int idx = 0;
@@ -55,28 +64,27 @@ void solve()
       if(push_time == 0 and idx < (int)v.size())
       {
         push_time += T;
-        vq[0].emplace_back(x[0], t[v[idx]][0], v[idx]);
+        vq[0].emplace_back(x[0], t[v[idx]][0] + idle_time, v[idx]);
         idx += 1;
       }
       int exe_time = inf;
       for (int i = 0; i < S; ++i)
       {
-        if(not vq[i].empty() and vq[i].front().r_len == 0)
+        if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0)
           stop = true;
       }
       for (int i = 0; i < S; ++i)
       {
-        for (int j = 0; j < (int)vq[i].size(); ++j)
+        auto &ei = exe_idx[i];
+        while(ei < (int)vq[i].size() and vq[i][ei].r_time == 0)
+          ei += 1;
+        if(not stop and not vq[i].empty())
         {
-          if(not stop)
-          {
-            chmin(exe_time, vq[i][j].r_len);
-          }
-          if(vq[i][j].r_time > 0)
-          {
-            chmin(exe_time, vq[i][j].r_time);
-            break;
-          }
+          chmin(exe_time, vq[i][0].r_len - idle_time);
+        }
+        if(ei < (int)vq[i].size())
+        {
+          chmin(exe_time, vq[i][ei].r_time);
         }
       }
       if(idx < (int)v.size())
@@ -85,38 +93,30 @@ void solve()
       }
       if(exe_time > L - real_time)
         break;
-      real_time += exe_time;
-      if(idx < (int)v.size())
+      if(idx < (int)v.size() and not stop)
       {
         push_time -= exe_time;
       }
+      if(not stop)
+        idle_time += exe_time;
+      real_time += exe_time;
       for (int i = S - 1; i >= 0; --i)
       {
-        bool exe = true;
-        for (int j = 0; j < (int)vq[i].size(); ++j)
+        auto &ei = exe_idx[i];
+        if(ei < (int)vq[i].size())
         {
-          if(not stop)
-          {
-            vq[i][j].r_len -= exe_time;
-          }
-          if(vq[i][j].r_time > 0 and exe)
-          {
-            exe = false;
-            vq[i][j].r_time -= exe_time;
-            if(vq[i][j].r_time == 0 and i == S - 1)
-            {
-              done += 1;
-            }
-          }
+          vq[i][ei].r_time -= exe_time;
         }
-        if(not vq[i].empty() and vq[i].front().r_len == 0 and vq[i].front().r_time == 0)
+        if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0 and vq[i].front().r_time == 0)
         {
           const int id = vq[i].front().id;
           vq[i].pop_front();
           if(i + 1 < S)
           {
-            vq[i + 1].emplace_back(x[i + 1], t[id][i + 1], id);
+            vq[i + 1].emplace_back(x[i + 1], t[id][i + 1] + idle_time, id);
           }
+          if(ei > 0)
+            ei -= 1;
         }
       }
     }
@@ -135,10 +135,6 @@ void solve()
   {
     iota[i] = i;
   }
-  std::sort(iota.begin(), iota.end(), [&](auto i, auto j)
-  {
-    return stime[i] < stime[j];
-  });
   std::vector<int> res;
   for (const auto &e : iota)
   {
@@ -147,9 +143,35 @@ void solve()
       res.emplace_back(e);
     }
   }
-  
-  const int done = run(res);
-  res.resize(done);
+  std::shuffle(res.begin(), res.end(), rnd);
+  const double deadline = 1800;
+  int best = run(res);
+  for (int kkt_so_cute = 0;; ++kkt_so_cute)
+  {
+    end = std::chrono::system_clock::now();
+    const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+    if(time > deadline)
+      break;
+    int id1 = xor64() % best;
+    int id2 = xor64() % (int)res.size();
+    while(res[id1] == res[id2])
+    {
+      id1 = xor64() % best;
+      id2 = xor64() % (int)res.size();
+    }
+    std::swap(res[id1], res[id2]);
+    const int done = run(res);
+    if(done > best)
+    {
+      best = done;
+    }
+    else
+    {
+      std::swap(res[id1], res[id2]);
+    }
+  }
+
+  res.resize(best);
   cout << res.size() << "\n";
   for (int i = 0; i < (int)res.size(); ++i)
   {
