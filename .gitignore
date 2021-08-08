@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+#Asprova007
+test/
+in/
+out/
+*.txt
