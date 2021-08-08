@@ -106,6 +106,8 @@ void solve()
         if(ei < (int)vq[i].size())
         {
           vq[i][ei].r_time -= exe_time;
+          if(i == S - 1 and vq[i][ei].r_time == 0)
+            done += 1;
         }
         if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0 and vq[i].front().r_time == 0)
         {
