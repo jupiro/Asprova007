@@ -49,9 +49,9 @@ void solve()
   {
     cin >> n[i];
   }
+  const int ALL = std::accumulate(n.begin(), n.end(), 0);
   std::vector<std::deque<KKT89>> vq(S);
   std::vector<int> exe_idx(S), cnt(m);
-  std::vector<int> vstop;
   auto run = [&](const std::vector<int> &v, bool gettime = false)->std::pair<double, int>
   {
     int real_time = 0;
@@ -64,7 +64,6 @@ void solve()
     int done = 0;
     while(real_time < L)
     {
-      vstop.clear();
       bool stop = false;
       if(push_time == 0 and idx < (int)v.size())
       {
@@ -121,7 +120,7 @@ void solve()
           if(i == S - 1 and vq[i][ei].r_time == 0)
           {
             done += 1;
-            cnt[i] += 1;
+            cnt[vq[i][ei].id] += 1;
           }
         }
         if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0 and vq[i].front().r_time == 0)
@@ -149,47 +148,70 @@ void solve()
     return std::make_pair(score, done);
   };
   std::vector<int> res;
+  std::vector<int> iota(m);
+  for (int i = 0; i < m; ++i)
+  {
+    iota[i] = i;
+  }
+  {
+    int best_get_time = run(iota, true).second;
+    for (int jupi_loves_kkt = 0;; ++jupi_loves_kkt)
+    {
+      end = std::chrono::system_clock::now();
+      const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+      if(time > deadline)
+        break;
+      const int id1 = xor64() % m;
+      const int id2 = xor64() % m;
+      std::swap(iota[id1], iota[id2]);
+      const int get_time = run(iota, true).second;
+      if(not chmin(best_get_time, get_time))
+      {
+        std::swap(iota[id1], iota[id2]);
+      }
+    }
+  }
   {
     auto t = n;
-    while(res.size() < 1000)
+    while((int)res.size() < ALL)
     {
-      for (int i = 0; i < m; ++i)
+      for(const auto &e : iota)
       {
-        if(t[i] > 0)
+        if(t[e] > 0)
         {
-          res.emplace_back(i);
-          t[i] -= 1;
+          res.emplace_back(e);
+          t[e] -= 1;
         }
       }
     }
   }
   auto [bs, bc] = run(res);
   //int a = 0;
-  for (int kkt_so_cute = 0;; ++kkt_so_cute)
-  {
-    // a += 1;
-    end = std::chrono::system_clock::now();
-    const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
-    if(time > deadline)
-      break;
-    int id1 = xor64() % bc;
-    int id2 = xor64() % (int)res.size();
-    while(res[id1] == res[id2])
-    {
-      id1 = xor64() % bc;
-      id2 = xor64() % (int)res.size();
-    }
-    std::swap(res[id1], res[id2]);
-    const auto [p, q] = run(res);
-    if(p > bs)
-    {
-      bs = p, bc = q;
-    }
-    else
-    {
-      std::swap(res[id1], res[id2]);
-    }
-  }
+  // for (int kkt_so_cute = 0;; ++kkt_so_cute)
+  // {
+  //   // a += 1;
+  //   end = std::chrono::system_clock::now();
+  //   const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+  //   if(time > deadline)
+  //     break;
+  //   int id1 = xor64() % bc;
+  //   int id2 = xor64() % (int)res.size();
+  //   while(res[id1] == res[id2])
+  //   {
+  //     id1 = xor64() % bc;
+  //     id2 = xor64() % (int)res.size();
+  //   }
+  //   std::swap(res[id1], res[id2]);
+  //   const auto [p, q] = run(res);
+  //   if(p > bs)
+  //   {
+  //     bs = p, bc = q;
+  //   }
+  //   else
+  //   {
+  //     std::swap(res[id1], res[id2]);
+  //   }
+  // }
   res.resize(bc);
   cout << res.size() << "\n";
   for (int i = 0; i < (int)res.size(); ++i)
