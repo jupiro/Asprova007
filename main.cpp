@@ -23,6 +23,7 @@ uint32_t xor64(void)
 }
 
 std::chrono::system_clock::time_point start, end;
+const double deadline = 1870;
 void solve()
 {
   start = std::chrono::system_clock::now();
@@ -50,7 +51,8 @@ void solve()
   }
   std::vector<std::deque<KKT89>> vq(S);
   std::vector<int> exe_idx(S), cnt(m);
-  auto run = [&](const std::vector<int> &v)->std::pair<double, int>
+  std::vector<int> vstop;
+  auto run = [&](const std::vector<int> &v, bool gettime = false)->std::pair<double, int>
   {
     int real_time = 0;
     int idle_time = 0;
@@ -62,6 +64,7 @@ void solve()
     int done = 0;
     while(real_time < L)
     {
+      vstop.clear();
       bool stop = false;
       if(push_time == 0 and idx < (int)v.size())
       {
@@ -72,26 +75,33 @@ void solve()
       int exe_time = inf;
       for (int i = 0; i < S; ++i)
       {
-        if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0)
-          stop = true;
-      }
-      for (int i = 0; i < S; ++i)
-      {
         auto &ei = exe_idx[i];
         while(ei < (int)vq[i].size() and vq[i][ei].r_time == 0)
           ei += 1;
-        if(not stop and not vq[i].empty())
+        if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0 and vq[i].front().r_time > 0)
         {
-          chmin(exe_time, vq[i][0].r_len - idle_time);
-        }
-        if(ei < (int)vq[i].size())
-        {
-          chmin(exe_time, vq[i][ei].r_time);
+          stop = true;
+          chmin(exe_time, vq[i].front().r_time);
         }
       }
-      if(idx < (int)v.size())
+      if(not stop)
       {
-        chmin(exe_time, push_time);
+        for (int i = 0; i < S; ++i)
+        {
+          auto &ei = exe_idx[i];
+          if(not stop and not vq[i].empty())
+          {
+            chmin(exe_time, vq[i][0].r_len - idle_time);
+          }
+          if(ei < (int)vq[i].size())
+          {
+            chmin(exe_time, vq[i][ei].r_time);
+          }
+        }
+        if(not stop and idx < (int)v.size())
+        {
+          chmin(exe_time, push_time);
+        }
       }
       if(exe_time > L - real_time)
         break;
@@ -127,6 +137,10 @@ void solve()
         }
       }
     }
+    if(gettime)
+    {
+      return std::make_pair(0.0, real_time);
+    }
     double score = 0;
     for (int i = 0; i < m; ++i)
     {
@@ -134,31 +148,23 @@ void solve()
     }
     return std::make_pair(score, done);
   };
-  std::vector<int> stime(m);
-  for (int i = 0; i < m; ++i)
-  {
-    for (int j = 0; j < S; ++j)
-    {
-      stime[i] += t[i][j];
-    }
-  }
-  std::vector<int> iota(m);
-  for (int i = 0; i < m; ++i)
-  {
-    iota[i] = i;
-  }
   std::vector<int> res;
-  for (const auto &e : iota)
   {
-    for (int i = 0; i < n[e]; ++i)
+    auto t = n;
+    while(res.size() < 1000)
     {
-      res.emplace_back(e);
+      for (int i = 0; i < m; ++i)
+      {
+        if(t[i] > 0)
+        {
+          res.emplace_back(i);
+          t[i] -= 1;
+        }
+      }
     }
   }
-  std::shuffle(res.begin(), res.end(), rnd);
-  const double deadline = 1900;
   auto [bs, bc] = run(res);
-  // int a = 0;
+  //int a = 0;
   for (int kkt_so_cute = 0;; ++kkt_so_cute)
   {
     // a += 1;
