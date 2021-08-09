@@ -186,32 +186,6 @@ void solve()
     }
   }
   auto [bs, bc] = run(res);
-  //int a = 0;
-  // for (int kkt_so_cute = 0;; ++kkt_so_cute)
-  // {
-  //   // a += 1;
-  //   end = std::chrono::system_clock::now();
-  //   const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
-  //   if(time > deadline)
-  //     break;
-  //   int id1 = xor64() % bc;
-  //   int id2 = xor64() % (int)res.size();
-  //   while(res[id1] == res[id2])
-  //   {
-  //     id1 = xor64() % bc;
-  //     id2 = xor64() % (int)res.size();
-  //   }
-  //   std::swap(res[id1], res[id2]);
-  //   const auto [p, q] = run(res);
-  //   if(p > bs)
-  //   {
-  //     bs = p, bc = q;
-  //   }
-  //   else
-  //   {
-  //     std::swap(res[id1], res[id2]);
-  //   }
-  // }
   res.resize(bc);
   cout << res.size() << "\n";
   for (int i = 0; i < (int)res.size(); ++i)
