@@ -162,10 +162,24 @@ void solve()
     return std::make_pair(score, done);
   };
   std::vector<int> res;
-  std::vector<int> iota(m);
+  std::vector<int> base;
   for (int i = 0; i < m; ++i)
   {
-    iota[i] = i;
+    if(n[i] < 30)
+    {
+      base.emplace_back(i);
+    }
+    else if(n[i] < 70)
+    {
+      base.emplace_back(i);
+      base.emplace_back(i);
+    }
+    else
+    {
+      base.emplace_back(i);
+      base.emplace_back(i);
+      base.emplace_back(i);
+    }
   }
 
   auto annealing = [&](std::vector<int> &v, double d_time = 800, bool climing = false, double start_temp = 1000, double end_temp = 0.01)
@@ -214,12 +228,12 @@ void solve()
     if(not climing)
       std::swap(v, best_v);
   };
-  annealing(iota, 400, true);
+  annealing(base, 1800, true);
   {
     auto t = n;
     while((int)res.size() < ALL)
     {
-      for(const auto &e : iota)
+      for(const auto &e : base)
       {
         if(t[e] > 0)
         {
@@ -230,76 +244,6 @@ void solve()
     }
   }
   auto [bs, bc] = run(res);
-  if(bs > 0.95)
-  {
-    annealing(iota, 1300, true);
-    std::tie(bs, bc) = run(res);
-  }
-  else
-  {
-    auto v = iota;
-    auto ans = res;
-    std::sort(v.begin(), v.end(), [&](auto i, auto j)
-    {
-      return loss[i] > loss[j];
-    });
-    std::vector<int> vskip; vskip.reserve((int)v.size() - 1);
-    {
-      vskip.clear();
-      res.clear();
-      auto t = n;
-      int limit = std::max(v[0] * 3 / 10, v[1] * 3 / 10);
-      for (int i = 0; i < limit; ++i)
-      {
-        for (int j = 0;j < 2; j++)
-        {
-          if(t[v[j]] > 0)
-          {
-            res.emplace_back(v[j]);
-            t[v[j]] -= 1;
-          }
-        }
-      }
-      for (int i = 2; i < (int)v.size(); ++i)
-      {
-        if(t[v[i]] == 0)
-          continue;
-        vskip.emplace_back(v[i]);
-      }
-      annealing(vskip, 1300, true);
-      while((int)res.size() < ALL - t[v[0]] - t[v[1]])
-      {
-        for(const auto &e : vskip)
-        {
-          if(t[e] > 0)
-          {
-            res.emplace_back(e);
-            t[e] -= 1;
-          }
-        }
-      }
-      while((int)res.size() < ALL)
-      {
-        for (int i = 0; i < 2; ++i)
-        {
-          if(t[v[i]] > 0)
-          {
-            res.emplace_back(v[i]);
-            t[v[i]] -= 1;
-          }
-        }
-      }
-
-      const auto [ts, tc] = run(res);
-      if(ts > bs)
-      {
-        ans = res;
-        bs = ts;
-        bc = tc;
-      }
-      std::swap(res, ans);
-    }
-  }
   res.resize(bc);
   cout << res.size() << "\n";
   for (int i = 0; i < (int)res.size(); ++i)
