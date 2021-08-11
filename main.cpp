@@ -22,7 +22,7 @@ uint32_t xor64(void)
   return x = x ^ (x << 17);
 }
 
-double start_temp1, end_temp1, start_temp2, end_temp2;
+double start_temp1 = 40, end_temp1 = 10, start_temp2 = 40, end_temp2 = 10;
 std::chrono::system_clock::time_point start, end;
 const double deadline = 1870;
 void solve()
@@ -169,6 +169,7 @@ void solve()
   {
     auto start = std::chrono::system_clock::now();
     int best_get_time = run(v, true).second;
+    int pre_get_time = best_get_time;
     auto best_v = v;
     for (int jupi_loves_kkt = 0;; ++jupi_loves_kkt)
     {
@@ -181,14 +182,20 @@ void solve()
       std::swap(v[id1], v[id2]);
       const int get_time = run(v, true).second;
       const double temp = start_temp + (end_temp - start_temp) * time / d_time;
-      const double prob = std::exp((best_get_time - get_time) / temp);
+      const double prob = std::exp((pre_get_time - get_time) / temp);
       if(get_time < best_get_time)
       {
         best_v = v;
+        best_get_time = get_time;
+        pre_get_time = get_time;
       }
       else if(prob < (double)(xor64() % inf) / (double)inf)
       {
         std::swap(v[id1], v[id2]);
+      }
+      else
+      {
+        pre_get_time = get_time;
       }
     }
     std::swap(v, best_v);
