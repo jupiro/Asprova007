@@ -163,25 +163,27 @@ void solve()
   {
     iota[i] = i;
   }
+
+  auto annealing = [&](std::vector<int> &v, double d_time)
   {
-    int best_get_time = run(iota, true).second;
+    int best_get_time = run(v, true).second;
     for (int jupi_loves_kkt = 0;; ++jupi_loves_kkt)
     {
       end = std::chrono::system_clock::now();
       const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
-      if(time > deadline / 2)
+      if(time > d_time)
         break;
-      const int id1 = xor64() % m;
-      const int id2 = xor64() % m;
-      std::swap(iota[id1], iota[id2]);
-      const int get_time = run(iota, true).second;
+      const int id1 = xor64() % (int)v.size();
+      const int id2 = xor64() % (int)v.size();
+      std::swap(v[id1], v[id2]);
+      const int get_time = run(v, true).second;
       if(not chmin(best_get_time, get_time))
       {
-        std::swap(iota[id1], iota[id2]);
+        std::swap(v[id1], v[id2]);
       }
     }
-  }
-
+  };
+  annealing(iota, deadline / 2);
   {
     auto t = n;
     bool two = false;
@@ -195,7 +197,7 @@ void solve()
           exist += 1;
         }
       }
-      if(not two and exist <= m * 3 / 4)
+      if(not two and exist <= m * 75 / 100)
       {
         std::vector<int> v;
         for (const auto &e : iota)
@@ -203,32 +205,10 @@ void solve()
           if(t[e] > 0)
             v.emplace_back(e);
         }
-        int best_get_time = run(v, true).second;
-        int accept = 0;
-        int t = 0;
-        for (int jupi_loves_kkt = 0;; ++jupi_loves_kkt)
-        {
-          t += 1;
-          end = std::chrono::system_clock::now();
-          const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
-          if(time > deadline)
-            break;
-          const int id1 = xor64() % (int)v.size();
-          const int id2 = xor64() % (int)v.size();
-          std::swap(v[id1], v[id2]);
-          const int get_time = run(v, true).second;
-          if(not chmin(best_get_time, get_time))
-          {
-            std::swap(v[id1], v[id2]);
-          }
-          else
-          {
-            accept += 1;
-          }
-        }
+        std::shuffle(v.begin(), v.end(), rnd);
+        annealing(v, deadline);
         iota = v;
         two = true;
-        std::cerr << "accept:" << accept << " / " << t << endl;
       }
       for(const auto &e : iota)
       {
