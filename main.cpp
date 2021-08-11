@@ -159,32 +159,9 @@ void solve()
   };
   std::vector<int> res;
   std::vector<int> iota(m);
-  std::vector<int> space(m);
   for (int i = 0; i < m; ++i)
   {
     iota[i] = i;
-  }
-  for (int i = 0; i < m; ++i)
-  {
-    for (int j = 0; j < S; ++j)
-    {
-      space[m] += x[j] - t[i][j];
-    }
-  }
-  std::sort(iota.begin(), iota.end(), [&](auto i, auto j)
-  {
-    return space[i] < space[j];
-  });
-  {
-    std::vector<int> v;
-    int l = 0, r = m - 1;
-    while(r > l)
-    {
-      v.emplace_back(iota[l]);
-      v.emplace_back(iota[r]);
-      l += 1, r -= 1;
-    }
-    std::swap(iota, v);
   }
   {
     int best_get_time = run(iota, true).second;
@@ -192,7 +169,7 @@ void solve()
     {
       end = std::chrono::system_clock::now();
       const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
-      if(time > deadline)
+      if(time > deadline / 2)
         break;
       const int id1 = xor64() % m;
       const int id2 = xor64() % m;
@@ -204,10 +181,55 @@ void solve()
       }
     }
   }
+
   {
     auto t = n;
+    bool two = false;
     while((int)res.size() < ALL)
     {
+      int exist = 0;
+      for (const auto &e : iota)
+      {
+        if(t[e] > 0)
+        {
+          exist += 1;
+        }
+      }
+      if(not two and exist <= m * 3 / 4)
+      {
+        std::vector<int> v;
+        for (const auto &e : iota)
+        {
+          if(t[e] > 0)
+            v.emplace_back(e);
+        }
+        int best_get_time = run(v, true).second;
+        int accept = 0;
+        int t = 0;
+        for (int jupi_loves_kkt = 0;; ++jupi_loves_kkt)
+        {
+          t += 1;
+          end = std::chrono::system_clock::now();
+          const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+          if(time > deadline)
+            break;
+          const int id1 = xor64() % (int)v.size();
+          const int id2 = xor64() % (int)v.size();
+          std::swap(v[id1], v[id2]);
+          const int get_time = run(v, true).second;
+          if(not chmin(best_get_time, get_time))
+          {
+            std::swap(v[id1], v[id2]);
+          }
+          else
+          {
+            accept += 1;
+          }
+        }
+        iota = v;
+        two = true;
+        std::cerr << "accept:" << accept << " / " << t << endl;
+      }
       for(const auto &e : iota)
       {
         if(t[e] > 0)
