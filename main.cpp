@@ -165,20 +165,35 @@ void solve()
   std::vector<int> base;
   for (int i = 0; i < m; ++i)
   {
-    if(n[i] < 30)
+    if(m == 20)
     {
-      base.emplace_back(i);
-    }
-    else if(n[i] < 70)
-    {
-      base.emplace_back(i);
-      base.emplace_back(i);
+      if(n[i] < 30)
+      {
+        base.emplace_back(i);
+      }
+      else if(n[i] < 70)
+      {
+        base.emplace_back(i);
+        base.emplace_back(i);
+      }
+      else
+      {
+        base.emplace_back(i);
+        base.emplace_back(i);
+        base.emplace_back(i);
+      }
     }
     else
     {
-      base.emplace_back(i);
-      base.emplace_back(i);
-      base.emplace_back(i);
+      if(n[i] > 25)
+      {
+        base.emplace_back(i);
+        base.emplace_back(i);
+      }
+      else
+      {
+        base.emplace_back(i);
+      }
     }
   }
 
@@ -228,17 +243,63 @@ void solve()
     if(not climing)
       std::swap(v, best_v);
   };
-  annealing(base, 1800, true);
+
+  if(m == 20)
+    annealing(base, 1800, true);
+  else
+    annealing(base, 1000, true);
   {
     auto t = n;
-    while((int)res.size() < ALL)
+    if(m == 20)
     {
-      for(const auto &e : base)
+      while((int)res.size() < ALL)
       {
-        if(t[e] > 0)
+        for(const auto &e : base)
         {
-          res.emplace_back(e);
-          t[e] -= 1;
+          if(t[e] > 0)
+          {
+            res.emplace_back(e);
+            t[e] -= 1;
+          }
+        }
+      }
+    }
+    else
+    {
+      for (int kkt = 0; kkt < 10; ++kkt)
+      {
+        for(const auto &e : base)
+        {
+          if(t[e] > 0)
+          {
+            res.emplace_back(e);
+            t[e] -= 1;
+          }
+        }
+      }
+      base.clear();
+      for (int i = 0; i < m; ++i)
+      {
+        if(t[i] > 10)
+        {
+          base.emplace_back(i);
+          base.emplace_back(i);
+        }
+        else if(t[i] > 0)
+        {
+          base.emplace_back(i);
+        }
+      }
+      annealing(base, 800, true);
+      while((int)res.size() < ALL)
+      {
+        for(const auto &e : base)
+        {
+          if(t[e] > 0)
+          {
+            res.emplace_back(e);
+            t[e] -= 1;
+          }
         }
       }
     }
