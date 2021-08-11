@@ -80,7 +80,12 @@ void solve()
         if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0 and vq[i].front().r_time > 0)
         {
           stop = true;
-          chmin(exe_time, vq[i].front().r_time);
+          if(exe_time == inf)
+          {
+            exe_time = vq[i].front().r_time;
+          }
+          else
+            chmax(exe_time, vq[i].front().r_time);
         }
       }
       if(not stop)
@@ -92,7 +97,7 @@ void solve()
           {
             chmin(exe_time, vq[i][0].r_len - idle_time);
           }
-          if(ei < (int)vq[i].size())
+          if(i == S - 1 and ei < (int)vq[i].size())
           {
             chmin(exe_time, vq[i][ei].r_time);
           }
@@ -114,14 +119,19 @@ void solve()
       for (int i = S - 1; i >= 0; --i)
       {
         auto &ei = exe_idx[i];
-        if(ei < (int)vq[i].size())
+        int r_exe_time = exe_time;
+        while(ei < (int)vq[i].size() and r_exe_time > 0)
         {
-          vq[i][ei].r_time -= exe_time;
+          const int min = std::min(vq[i][ei].r_time, r_exe_time);
+          vq[i][ei].r_time -= min;
+          r_exe_time -= min;
           if(i == S - 1 and vq[i][ei].r_time == 0)
           {
             done += 1;
             cnt[vq[i][ei].id] += 1;
           }
+          if(vq[i][ei].r_time == 0)
+            ei += 1;
         }
         if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0 and vq[i].front().r_time == 0)
         {
