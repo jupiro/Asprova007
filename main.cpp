@@ -22,7 +22,7 @@ uint32_t xor64(void)
   return x = x ^ (x << 17);
 }
 
-double start_temp1 = 40, end_temp1 = 10, start_temp2 = 40, end_temp2 = 10;
+double start_temp1 = 1, end_temp1 = 0.01, start_temp2 = 1, end_temp2 = 0.01;
 std::chrono::system_clock::time_point start, end;
 const double deadline = 1870;
 void solve()
@@ -52,7 +52,7 @@ void solve()
   }
   const int ALL = std::accumulate(n.begin(), n.end(), 0);
   std::vector<std::deque<KKT89>> vq(S);
-  std::vector<int> exe_idx(S), cnt(m);
+  std::vector<int> exe_idx(S), cnt(m), loss(m);
   auto run = [&](const std::vector<int> &v, bool gettime = false)->std::pair<double, int>
   {
     int real_time = 0;
@@ -60,6 +60,7 @@ void solve()
     vq.clear(); vq.resize(S);
     exe_idx.clear(); exe_idx.resize(S);
     cnt.clear(); cnt.resize(m);
+    loss.assign(m, 0);
     int push_time = 0;
     int idx = 0;
     int done = 0;
@@ -81,6 +82,7 @@ void solve()
         if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0 and vq[i].front().r_time > 0)
         {
           stop = true;
+          loss[vq[i].front().id] += vq[i].front().r_time;
           if(exe_time == inf)
           {
             exe_time = vq[i].front().r_time;
@@ -156,6 +158,7 @@ void solve()
     {
       score += std::sqrt((double)cnt[i] / (double)n[i]);
     }
+    score /= m;
     return std::make_pair(score, done);
   };
   std::vector<int> res;
@@ -165,7 +168,7 @@ void solve()
     iota[i] = i;
   }
 
-  auto annealing = [&](std::vector<int> &v, double start_temp = 1000, double end_temp = 0.01, double d_time = 800)
+  auto annealing = [&](std::vector<int> &v, double d_time = 800, bool climing = false, double start_temp = 1000, double end_temp = 0.01)
   {
     auto start = std::chrono::system_clock::now();
     int best_get_time = run(v, true).second;
@@ -181,52 +184,41 @@ void solve()
       const int id2 = xor64() % (int)v.size();
       std::swap(v[id1], v[id2]);
       const int get_time = run(v, true).second;
-      const double temp = start_temp + (end_temp - start_temp) * time / d_time;
-      const double prob = std::exp((pre_get_time - get_time) / temp);
-      if(get_time < best_get_time)
+      if(climing)
       {
-        best_v = v;
-        best_get_time = get_time;
-        pre_get_time = get_time;
-      }
-      else if(prob < (double)(xor64() % inf) / (double)inf)
-      {
-        std::swap(v[id1], v[id2]);
+        if(not chmin(best_get_time, get_time))
+        {
+          std::swap(v[id1], v[id2]);
+        }
       }
       else
       {
-        pre_get_time = get_time;
+        const double temp = start_temp + (end_temp - start_temp) * time / d_time;
+        const double prob = std::exp((pre_get_time - get_time) / temp);
+        if(get_time < best_get_time)
+        {
+          best_v = v;
+          best_get_time = get_time;
+          pre_get_time = get_time;
+        }
+        else if(prob < (double)(xor64() % inf) / (double)inf)
+        {
+          std::swap(v[id1], v[id2]);
+        }
+        else
+        {
+          pre_get_time = get_time;
+        }
       }
     }
-    std::swap(v, best_v);
+    if(not climing)
+      std::swap(v, best_v);
   };
-  annealing(iota, start_temp1, end_temp1, 1000);
+  annealing(iota, 400, true);
   {
     auto t = n;
-    bool two = false;
     while((int)res.size() < ALL)
     {
-      int exist = 0;
-      for (const auto &e : iota)
-      {
-        if(t[e] > 0)
-        {
-          exist += 1;
-        }
-      }
-      if(not two and exist <= m * 75 / 100)
-      {
-        std::vector<int> v;
-        for (const auto &e : iota)
-        {
-          if(t[e] > 0)
-            v.emplace_back(e);
-        }
-        std::shuffle(v.begin(), v.end(), rnd);
-        annealing(v, start_temp2, end_temp2, 800);
-        iota = v;
-        two = true;
-      }
       for(const auto &e : iota)
       {
         if(t[e] > 0)
@@ -238,6 +230,76 @@ void solve()
     }
   }
   auto [bs, bc] = run(res);
+  if(bs > 0.95)
+  {
+    annealing(iota, 1300, true);
+    std::tie(bs, bc) = run(res);
+  }
+  else
+  {
+    auto v = iota;
+    auto ans = res;
+    std::sort(v.begin(), v.end(), [&](auto i, auto j)
+    {
+      return loss[i] > loss[j];
+    });
+    std::vector<int> vskip; vskip.reserve((int)v.size() - 1);
+    {
+      vskip.clear();
+      res.clear();
+      auto t = n;
+      int limit = std::max(v[0] * 3 / 10, v[1] * 3 / 10);
+      for (int i = 0; i < limit; ++i)
+      {
+        for (int j = 0;j < 2; j++)
+        {
+          if(t[v[j]] > 0)
+          {
+            res.emplace_back(v[j]);
+            t[v[j]] -= 1;
+          }
+        }
+      }
+      for (int i = 2; i < (int)v.size(); ++i)
+      {
+        if(t[v[i]] == 0)
+          continue;
+        vskip.emplace_back(v[i]);
+      }
+      annealing(vskip, 1300, true);
+      while((int)res.size() < ALL - t[v[0]] - t[v[1]])
+      {
+        for(const auto &e : vskip)
+        {
+          if(t[e] > 0)
+          {
+            res.emplace_back(e);
+            t[e] -= 1;
+          }
+        }
+      }
+      while((int)res.size() < ALL)
+      {
+        for (int i = 0; i < 2; ++i)
+        {
+          if(t[v[i]] > 0)
+          {
+            res.emplace_back(v[i]);
+            t[v[i]] -= 1;
+          }
+        }
+      }
+
+      const auto [ts, tc] = run(res);
+      if(ts > bs)
+      {
+        ans = res;
+        bs = ts;
+        bc = tc;
+      }
+      std::swap(res, ans);
+    }
+  }
   res.resize(bc);
   cout << res.size() << "\n";
   for (int i = 0; i < (int)res.size(); ++i)
