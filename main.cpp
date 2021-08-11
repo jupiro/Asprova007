@@ -159,9 +159,32 @@ void solve()
   };
   std::vector<int> res;
   std::vector<int> iota(m);
+  std::vector<int> space(m);
   for (int i = 0; i < m; ++i)
   {
     iota[i] = i;
+  }
+  for (int i = 0; i < m; ++i)
+  {
+    for (int j = 0; j < S; ++j)
+    {
+      space[m] += x[j] - t[i][j];
+    }
+  }
+  std::sort(iota.begin(), iota.end(), [&](auto i, auto j)
+  {
+    return space[i] < space[j];
+  });
+  {
+    std::vector<int> v;
+    int l = 0, r = m - 1;
+    while(r > l)
+    {
+      v.emplace_back(iota[l]);
+      v.emplace_back(iota[r]);
+      l += 1, r -= 1;
+    }
+    std::swap(iota, v);
   }
   {
     int best_get_time = run(iota, true).second;
