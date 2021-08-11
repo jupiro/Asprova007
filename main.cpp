@@ -22,6 +22,7 @@ uint32_t xor64(void)
   return x = x ^ (x << 17);
 }
 
+double start_temp1, end_temp1, start_temp2, end_temp2;
 std::chrono::system_clock::time_point start, end;
 const double deadline = 1870;
 void solve()
@@ -164,12 +165,14 @@ void solve()
     iota[i] = i;
   }
 
-  auto annealing = [&](std::vector<int> &v, double d_time)
+  auto annealing = [&](std::vector<int> &v, double start_temp = 1000, double end_temp = 0.01, double d_time = 800)
   {
+    auto start = std::chrono::system_clock::now();
     int best_get_time = run(v, true).second;
+    auto best_v = v;
     for (int jupi_loves_kkt = 0;; ++jupi_loves_kkt)
     {
-      end = std::chrono::system_clock::now();
+      auto end = std::chrono::system_clock::now();
       const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
       if(time > d_time)
         break;
@@ -177,13 +180,20 @@ void solve()
       const int id2 = xor64() % (int)v.size();
       std::swap(v[id1], v[id2]);
       const int get_time = run(v, true).second;
-      if(not chmin(best_get_time, get_time))
+      const double temp = start_temp + (end_temp - start_temp) * time / d_time;
+      const double prob = std::exp((best_get_time - get_time) / temp);
+      if(get_time < best_get_time)
+      {
+        best_v = v;
+      }
+      else if(prob < (double)(xor64() % inf) / (double)inf)
       {
         std::swap(v[id1], v[id2]);
       }
     }
+    std::swap(v, best_v);
   };
-  annealing(iota, deadline / 2);
+  annealing(iota, start_temp1, end_temp1, 1000);
   {
     auto t = n;
     bool two = false;
@@ -206,7 +216,7 @@ void solve()
             v.emplace_back(e);
         }
         std::shuffle(v.begin(), v.end(), rnd);
-        annealing(v, deadline);
+        annealing(v, start_temp2, end_temp2, 800);
         iota = v;
         two = true;
       }
@@ -228,11 +238,18 @@ void solve()
     cout << res[i] + 1 << " \n"[i + 1 == (int)res.size()];
   }
 }
-int main()
+int main(int argc, char *argv[])
 {
   std::cin.tie(nullptr);
   std::ios::sync_with_stdio(false);
 
+  if(argc > 1)
+  {
+    start_temp1 = std::stod(std::string(argv[1]));
+    end_temp1 = std::stod(std::string(argv[2]));
+    start_temp2 = std::stod(std::string(argv[3]));
+    end_temp2 = std::stod(std::string(argv[4]));
+  }
   int kkt = 1; 
   // cin >> kkt;
   while(kkt--)
