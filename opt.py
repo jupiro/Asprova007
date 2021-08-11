@@ -13,3 +13,5 @@ def objective(trial):
     return score
 study = optuna.create_study()
 study.optimize(objective, n_trials=10)
+print(study.best_params)
+print(study.best_value)
