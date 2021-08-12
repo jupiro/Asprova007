@@ -50,6 +50,7 @@ void solve()
   {
     cin >> n[i];
   }
+  const auto inin = n;
   const int ALL = std::accumulate(n.begin(), n.end(), 0);
   std::vector<std::deque<KKT89>> vq(S);
   std::vector<int> exe_idx(S), cnt(m), loss(m);
@@ -163,142 +164,145 @@ void solve()
   };
   std::vector<int> res;
   std::vector<int> base;
-  for (int i = 0; i < m; ++i)
+  std::vector<int> iota(m); std::iota(iota.begin(), iota.end(), 0);
+  std::vector<std::vector<int>> pn(m, std::vector<int>(m));
+  std::vector<std::pair<int, int>> pbase;
   {
-    if(m == 20)
+    std::vector<std::pair<int, int>> loss;
+    std::sort(iota.begin(), iota.end(), [&](auto i, auto j)
     {
-      if(n[i] < 30)
-      {
-        base.emplace_back(i);
-      }
-      else if(n[i] < 70)
-      {
-        base.emplace_back(i);
-        base.emplace_back(i);
-      }
-      else
-      {
-        base.emplace_back(i);
-        base.emplace_back(i);
-        base.emplace_back(i);
-      }
-    }
-    else
+      return n[i] < n[j];
+    });
+    std::vector<int> v;
+    for (int i = 0; i < m; ++i)
     {
-      if(n[i] > 25)
+      loss.clear();
+      if(n[i] == 0)
+        continue;
+      for (int j = 0; j < m; ++j)
       {
-        base.emplace_back(i);
-        base.emplace_back(i);
+        v.clear();
+        v.emplace_back(iota[i]);
+        v.emplace_back(iota[j]);
+        loss.emplace_back(run(v, true).second, j);
       }
-      else
+      std::sort(loss.begin(), loss.end(), [&](auto i, auto j)
       {
-        base.emplace_back(i);
+        if(i.first == j.first)
+        {
+          return n[i.second] * inin[j.second] < n[j.second] * inin[i.second];
+        }
+        else
+          return i.first < j.first;
+      });
+      for (const auto &[tl, id] : loss)
+      {
+        if(id == i)
+          continue;
+        if(tl > 20)
+          break;
+        const int l = iota[i];
+        const int r = iota[id];
+        const int min = std::min(n[r], n[l]);
+        pn[l][r] += min;
+        n[r] -= min;
+        n[l] -= min;
       }
     }
   }
-
-  auto annealing = [&](std::vector<int> &v, double d_time = 800, bool climing = false, double start_temp = 1000, double end_temp = 0.01)
+  for (int i = 0; i < m; ++i)
+  {
+    for (int j = 0; j < m; ++j)
+    {
+      if(pn[i][j] > 0)
+      {
+        pbase.emplace_back(i, j);
+      }
+    }
+    if(n[i] > 0)
+    {
+      pbase.emplace_back(i, -1);
+    }
+  }
+  auto pbase2base = [&](const std::vector<std::pair<int, int>> &pbase, std::vector<int> &base)
+  {
+    base.clear();
+    for (const auto &[l, r] : pbase)
+    {
+      base.emplace_back(l);
+      if(r >= 0)
+        base.emplace_back(r);
+    }
+  };
+  auto annealing = [&](std::vector<std::pair<int, int>> &pbase, double d_time = 800, bool climing = false, [[maybe_unused]]double start_temp = 1000, [[maybe_unused]]double end_temp = 0.01)
   {
     auto start = std::chrono::system_clock::now();
-    int best_get_time = run(v, true).second;
-    int pre_get_time = best_get_time;
-    auto best_v = v;
+    pbase2base(pbase, base);
+    int best_get_time = run(base, true).second;
+    // int pre_get_time = best_get_time;
+    // auto best_v = v;
     for (int jupi_loves_kkt = 0;; ++jupi_loves_kkt)
     {
       auto end = std::chrono::system_clock::now();
       const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
       if(time > d_time)
         break;
-      const int id1 = xor64() % (int)v.size();
-      const int id2 = xor64() % (int)v.size();
-      std::swap(v[id1], v[id2]);
-      const int get_time = run(v, true).second;
+      const int id1 = xor64() % (int)pbase.size();
+      const int id2 = xor64() % (int)pbase.size();
+      std::swap(pbase[id1], pbase[id2]);
+      pbase2base(pbase, base);
+      const int get_time = run(base, true).second;
       if(climing)
       {
         if(not chmin(best_get_time, get_time))
         {
-          std::swap(v[id1], v[id2]);
+          std::swap(pbase[id1], pbase[id2]);
         }
       }
-      else
+      // else
+      // {
+      //   const double temp = start_temp + (end_temp - start_temp) * time / d_time;
+      //   const double prob = std::exp((pre_get_time - get_time) / temp);
+      //   if(get_time < best_get_time)
+      //   {
+      //     best_v = v;
+      //     best_get_time = get_time;
+      //     pre_get_time = get_time;
+      //   }
+      //   else if(prob < (double)(xor64() % inf) / (double)inf)
+      //   {
+      //     std::swap(v[id1], v[id2]);
+      //   }
+      //   else
+      //   {
+      //     pre_get_time = get_time;
+      //   }
+      // }
+    }
+    // if(not climing)
+    //   std::swap(v, best_v);
+  };
+  annealing(pbase, 1800, true);
+  {
+    while((int)res.size() < ALL)
+    {
+      for (const auto &[l, r] : pbase)
       {
-        const double temp = start_temp + (end_temp - start_temp) * time / d_time;
-        const double prob = std::exp((pre_get_time - get_time) / temp);
-        if(get_time < best_get_time)
+        if(r >= 0)
         {
-          best_v = v;
-          best_get_time = get_time;
-          pre_get_time = get_time;
-        }
-        else if(prob < (double)(xor64() % inf) / (double)inf)
-        {
-          std::swap(v[id1], v[id2]);
+          if(pn[l][r] > 0)
+          {
+            res.emplace_back(l);
+            res.emplace_back(r);
+            pn[l][r] -= 1;
+          }
         }
         else
         {
-          pre_get_time = get_time;
-        }
-      }
-    }
-    if(not climing)
-      std::swap(v, best_v);
-  };
-
-  if(m == 20)
-    annealing(base, 1800, true);
-  else
-    annealing(base, 1000, true);
-  {
-    auto t = n;
-    if(m == 20)
-    {
-      while((int)res.size() < ALL)
-      {
-        for(const auto &e : base)
-        {
-          if(t[e] > 0)
+          if(n[l] > 0)
           {
-            res.emplace_back(e);
-            t[e] -= 1;
-          }
-        }
-      }
-    }
-    else
-    {
-      for (int kkt = 0; kkt < 10; ++kkt)
-      {
-        for(const auto &e : base)
-        {
-          if(t[e] > 0)
-          {
-            res.emplace_back(e);
-            t[e] -= 1;
-          }
-        }
-      }
-      base.clear();
-      for (int i = 0; i < m; ++i)
-      {
-        if(t[i] > 10)
-        {
-          base.emplace_back(i);
-          base.emplace_back(i);
-        }
-        else if(t[i] > 0)
-        {
-          base.emplace_back(i);
-        }
-      }
-      annealing(base, 800, true);
-      while((int)res.size() < ALL)
-      {
-        for(const auto &e : base)
-        {
-          if(t[e] > 0)
-          {
-            res.emplace_back(e);
-            t[e] -= 1;
+            n[l] -= 1;
+            res.emplace_back(l);
           }
         }
       }
