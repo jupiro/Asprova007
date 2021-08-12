@@ -53,7 +53,7 @@ void solve()
   const int ALL = std::accumulate(n.begin(), n.end(), 0);
   std::vector<std::deque<KKT89>> vq(S);
   std::vector<int> exe_idx(S), cnt(m), loss(m);
-  auto run = [&](const std::vector<int> &v, bool gettime = false)->std::pair<double, int>
+  auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<double, int>
   {
     int real_time = 0;
     int idle_time = 0;
@@ -149,9 +149,9 @@ void solve()
         }
       }
     }
-    if(gettime)
+    if(get_losstime)
     {
-      return std::make_pair(0.0, real_time);
+      return std::make_pair(0.0, real_time - idle_time);
     }
     double score = 0;
     for (int i = 0; i < m; ++i)
