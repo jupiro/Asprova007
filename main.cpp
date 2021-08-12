@@ -190,7 +190,9 @@ void solve()
       {
         if(i.first == j.first)
         {
-          return n[i.second] * inin[j.second] < n[j.second] * inin[i.second];
+          const int l = iota[i.second];
+          const int r = iota[j.second];
+          return n[l] * inin[r] > n[r] * inin[l];
         }
         else
           return i.first < j.first;
