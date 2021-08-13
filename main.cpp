@@ -164,19 +164,24 @@ void solve()
   };
   std::vector<int> res;
   std::vector<int> base;
-
-  std::vector pair_loss(m, std::vector<int>(m));
+  std::vector pair_loss(m, std::vector(m, std::vector<int>(m)));
   {
     std::vector<int> v;
     for (int i = 0; i < m; ++i)
     {
+      v.emplace_back(i);
       for (int j = 0; j < m; ++j)
       {
-        v.clear();
-        v.emplace_back(i);
         v.emplace_back(j);
-        pair_loss[i][j] = run(v, true).second;
+        for (int k = 0; k < m; ++k)
+        {
+          v.emplace_back(k);
+          pair_loss[i][j][k] = run(v, true).second;
+          v.pop_back();
+        }
+        v.pop_back();
       }
+      v.pop_back();
     }
   }
   auto annealing = [&](std::vector<int> &v, double d_time = 800, bool climing = false, double start_temp = 1000, double end_temp = 0.01)
@@ -195,25 +200,16 @@ void solve()
         break;
       id[0] = xor64() % (int)v.size();
       id[1] = xor64() % (int)v.size();
-
+      if(id[0] == 0 or id[1] == 0 or id[0] + 1 == (int)v.size() or id[1] + 1 == (int)v.size())
+        continue;
       int diff_time = 0;
       for (int i = 0; i < 2; ++i)
       {
-        v1.clear();
-        v2.clear();
-        if(id[i] > 0)
-        {
-          v1.emplace_back(v[id[i] - 1]);
-          v2.emplace_back(v[id[i] - 1]);
-        }
-        v1.emplace_back(v[id[i]]);
-        v2.emplace_back(v[id[i ^ 1]]);
-        if(id[i] + 1 < (int)v.size())
-        {
-          v1.emplace_back(v[id[i] + 1]);
-          v2.emplace_back(v[id[i] + 1]);
-        }
-        diff_time += run(v2, true).second - run(v1, true).second;
+        const int X = v[id[i] - 1];
+        const int Y1 = v[id[i]];
+        const int Y2 = v[id[i ^ 1]];
+        const int Z = v[id[i] + 1];
+        diff_time += pair_loss[X][Y2][Z] - pair_loss[X][Y2][Z];
       }
       if(climing)
       {
@@ -246,9 +242,12 @@ void solve()
     //   std::swap(v, best_v);
   };
   {
-    int s = std::min_element(n.begin(), n.end()) - n.begin();
-    res.emplace_back(s);
-    n[s] -= 1;
+    int s1 = std::min_element(n.begin(), n.end()) - n.begin();
+    int s2 = std::max_element(n.begin(), n.end()) - n.begin();
+    res.emplace_back(s1);
+    res.emplace_back(s2);
+    n[s1] -= 1;
+    n[s2] -= 1;
     while((int)res.size() < ALL)
     {
       int min_loss = inf;
@@ -258,12 +257,12 @@ void solve()
       {
         if(n[i] > 0)
         {
-          if(chmin(min_loss, pair_loss[s][i]))
+          if(chmin(min_loss, pair_loss[s1][s2][i]))
           {
             max_par = (double)n[i] / (double)inin[i];
             id = i;
           }
-          else if(min_loss == pair_loss[s][i])
+          else if(min_loss == pair_loss[s1][s2][i])
           {
             if(chmax(max_par, (double)n[i] / (double)inin[i]))
             {
@@ -273,11 +272,12 @@ void solve()
         }
       }
       res.emplace_back(id);
-      s = id;
+      s1 = s2;
+      s2 = id;
       n[id] -= 1;
     }
   }
-  annealing(res, 1800, true);
+  // annealing(res, 1400, true);
   auto [bs, bc] = run(res);
   res.resize(bc);
   cout << res.size() << "\n";
