@@ -182,48 +182,68 @@ void solve()
   auto annealing = [&](std::vector<int> &v, double d_time = 800, bool climing = false, double start_temp = 1000, double end_temp = 0.01)
   {
     auto start = std::chrono::system_clock::now();
-    int best_get_time = run(v, true).second;
-    int pre_get_time = best_get_time;
-    auto best_v = v;
+    // int best_get_time = run(v, true).second;
+    // int pre_get_time = best_get_time;
+    // auto best_v = v;
+    std::vector<int> v1, v2;
+    int id[2] = {};
     for (int jupi_loves_kkt = 0;; ++jupi_loves_kkt)
     {
       auto end = std::chrono::system_clock::now();
       const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
       if(time > d_time)
         break;
-      const int id1 = xor64() % (int)v.size();
-      const int id2 = xor64() % (int)v.size();
-      std::swap(v[id1], v[id2]);
-      const int get_time = run(v, true).second;
+      id[0] = xor64() % (int)v.size();
+      id[1] = xor64() % (int)v.size();
+
+      int diff_time = 0;
+      for (int i = 0; i < 2; ++i)
+      {
+        v1.clear();
+        v2.clear();
+        if(id[i] > 0)
+        {
+          v1.emplace_back(v[id[i] - 1]);
+          v2.emplace_back(v[id[i] - 1]);
+        }
+        v1.emplace_back(v[id[i]]);
+        v2.emplace_back(v[id[i ^ 1]]);
+        if(id[i] + 1 < (int)v.size())
+        {
+          v1.emplace_back(v[id[i] + 1]);
+          v2.emplace_back(v[id[i] + 1]);
+        }
+        diff_time += run(v2, true).second - run(v1, true).second;
+      }
       if(climing)
       {
-        if(not chmin(best_get_time, get_time))
+        if(diff_time < 0)
         {
-          std::swap(v[id1], v[id2]);
+          std::swap(v[id[0]], v[id[1]]);
         }
       }
-      else
-      {
-        const double temp = start_temp + (end_temp - start_temp) * time / d_time;
-        const double prob = std::exp((pre_get_time - get_time) / temp);
-        if(get_time < best_get_time)
-        {
-          best_v = v;
-          best_get_time = get_time;
-          pre_get_time = get_time;
-        }
-        else if(prob < (double)(xor64() % inf) / (double)inf)
-        {
-          std::swap(v[id1], v[id2]);
-        }
-        else
-        {
-          pre_get_time = get_time;
-        }
-      }
+      // else
+      // {
+      //   const double temp = start_temp + (end_temp - start_temp) * time / d_time;
+      //   const double prob = std::exp((pre_get_time - get_time) / temp);
+      //   if(get_time < best_get_time)
+      //   {
+      //     best_v = v;
+      //     best_get_time = get_time;
+      //     pre_get_time = get_time;
+      //   }
+      //   else if(prob < (double)(xor64() % inf) / (double)inf)
+      //   {
+      //     std::swap(v[id1], v[id2]);
+      //   }
+      //   else
+      //   {
+      //     pre_get_time = get_time;
+      //   }
+      // }
     }
-    if(not climing)
-      std::swap(v, best_v);
+    // if(not climing)
+    //   std::swap(v, best_v);
   };
   {
     int s = std::min_element(n.begin(), n.end()) - n.begin();
@@ -257,6 +277,7 @@ void solve()
       n[id] -= 1;
     }
   }
+  annealing(res, 1800, true);
   auto [bs, bc] = run(res);
   res.resize(bc);
   cout << res.size() << "\n";
