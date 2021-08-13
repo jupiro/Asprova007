@@ -54,10 +54,10 @@ void solve()
   const int ALL = std::accumulate(n.begin(), n.end(), 0);
   std::vector<std::deque<KKT89>> vq(S);
   std::vector<int> exe_idx(S), cnt(m), loss(m);
-  auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<double, int>
+  auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<int, int>
   {
     int real_time = 0;
-    int idle_time = 0;
+    int run_time = 0;
     vq.clear(); vq.resize(S);
     exe_idx.clear(); exe_idx.resize(S);
     cnt.clear(); cnt.resize(m);
@@ -71,7 +71,7 @@ void solve()
       if(push_time == 0 and idx < (int)v.size())
       {
         push_time += T;
-        vq[0].emplace_back(x[0] + idle_time, t[v[idx]][0], v[idx]);
+        vq[0].emplace_back(x[0] + run_time, t[v[idx]][0], v[idx]);
         idx += 1;
       }
       int exe_time = inf;
@@ -80,7 +80,7 @@ void solve()
         auto &ei = exe_idx[i];
         while(ei < (int)vq[i].size() and vq[i][ei].r_time == 0)
           ei += 1;
-        if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0 and vq[i].front().r_time > 0)
+        if(not vq[i].empty() and vq[i].front().r_len - run_time == 0 and vq[i].front().r_time > 0)
         {
           stop = true;
           loss[vq[i].front().id] += vq[i].front().r_time;
@@ -99,7 +99,7 @@ void solve()
           auto &ei = exe_idx[i];
           if(not stop and not vq[i].empty())
           {
-            chmin(exe_time, vq[i][0].r_len - idle_time);
+            chmin(exe_time, vq[i][0].r_len - run_time);
           }
           if(i == S - 1 and ei < (int)vq[i].size())
           {
@@ -118,7 +118,7 @@ void solve()
         push_time -= exe_time;
       }
       if(not stop)
-        idle_time += exe_time;
+        run_time += exe_time;
       real_time += exe_time;
       for (int i = S - 1; i >= 0; --i)
       {
@@ -137,13 +137,13 @@ void solve()
           if(vq[i][ei].r_time == 0)
             ei += 1;
         }
-        if(not vq[i].empty() and vq[i].front().r_len - idle_time == 0 and vq[i].front().r_time == 0)
+        if(not vq[i].empty() and vq[i].front().r_len - run_time == 0 and vq[i].front().r_time == 0)
         {
           const int id = vq[i].front().id;
           vq[i].pop_front();
           if(i + 1 < S)
           {
-            vq[i + 1].emplace_back(x[i + 1] + idle_time, t[id][i + 1], id);
+            vq[i + 1].emplace_back(x[i + 1] + run_time, t[id][i + 1], id);
           }
           if(ei > 0)
             ei -= 1;
@@ -152,7 +152,7 @@ void solve()
     }
     if(get_losstime)
     {
-      return std::make_pair(0.0, real_time - idle_time);
+      return std::make_pair(0.0, real_time - run_time);
     }
     double score = 0;
     for (int i = 0; i < m; ++i)
@@ -164,150 +164,97 @@ void solve()
   };
   std::vector<int> res;
   std::vector<int> base;
-  std::vector<int> iota(m); std::iota(iota.begin(), iota.end(), 0);
-  std::vector<std::vector<int>> pn(m, std::vector<int>(m));
-  std::vector<std::pair<int, int>> pbase;
+
+  std::vector pair_loss(m, std::vector<int>(m));
   {
-    std::vector<std::pair<int, int>> loss;
-    std::sort(iota.begin(), iota.end(), [&](auto i, auto j)
-    {
-      return n[i] < n[j];
-    });
     std::vector<int> v;
     for (int i = 0; i < m; ++i)
     {
-      loss.clear();
-      if(n[i] == 0)
-        continue;
       for (int j = 0; j < m; ++j)
       {
         v.clear();
-        v.emplace_back(iota[i]);
-        v.emplace_back(iota[j]);
-        loss.emplace_back(run(v, true).second, j);
-      }
-      std::sort(loss.begin(), loss.end(), [&](auto i, auto j)
-      {
-        if(i.first == j.first)
-        {
-          const int l = iota[i.second];
-          const int r = iota[j.second];
-          return n[l] * inin[r] > n[r] * inin[l];
-        }
-        else
-          return i.first < j.first;
-      });
-      for (const auto &[tl, id] : loss)
-      {
-        if(id == i)
-          continue;
-        if(tl > 20)
-          break;
-        const int l = iota[i];
-        const int r = iota[id];
-        const int min = std::min(n[r], n[l]);
-        pn[l][r] += min;
-        n[r] -= min;
-        n[l] -= min;
+        v.emplace_back(i);
+        v.emplace_back(j);
+        pair_loss[i][j] = run(v, true).second;
       }
     }
   }
-  for (int i = 0; i < m; ++i)
-  {
-    for (int j = 0; j < m; ++j)
-    {
-      if(pn[i][j] > 0)
-      {
-        pbase.emplace_back(i, j);
-      }
-    }
-    if(n[i] > 0)
-    {
-      pbase.emplace_back(i, -1);
-    }
-  }
-  auto pbase2base = [&](const std::vector<std::pair<int, int>> &pbase, std::vector<int> &base)
-  {
-    base.clear();
-    for (const auto &[l, r] : pbase)
-    {
-      base.emplace_back(l);
-      if(r >= 0)
-        base.emplace_back(r);
-    }
-  };
-  auto annealing = [&](std::vector<std::pair<int, int>> &pbase, double d_time = 800, bool climing = false, [[maybe_unused]]double start_temp = 1000, [[maybe_unused]]double end_temp = 0.01)
+  auto annealing = [&](std::vector<int> &v, double d_time = 800, bool climing = false, double start_temp = 1000, double end_temp = 0.01)
   {
     auto start = std::chrono::system_clock::now();
-    pbase2base(pbase, base);
-    int best_get_time = run(base, true).second;
-    // int pre_get_time = best_get_time;
-    // auto best_v = v;
+    int best_get_time = run(v, true).second;
+    int pre_get_time = best_get_time;
+    auto best_v = v;
     for (int jupi_loves_kkt = 0;; ++jupi_loves_kkt)
     {
       auto end = std::chrono::system_clock::now();
       const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
       if(time > d_time)
         break;
-      const int id1 = xor64() % (int)pbase.size();
-      const int id2 = xor64() % (int)pbase.size();
-      std::swap(pbase[id1], pbase[id2]);
-      pbase2base(pbase, base);
-      const int get_time = run(base, true).second;
+      const int id1 = xor64() % (int)v.size();
+      const int id2 = xor64() % (int)v.size();
+      std::swap(v[id1], v[id2]);
+      const int get_time = run(v, true).second;
       if(climing)
       {
         if(not chmin(best_get_time, get_time))
         {
-          std::swap(pbase[id1], pbase[id2]);
+          std::swap(v[id1], v[id2]);
         }
       }
-      // else
-      // {
-      //   const double temp = start_temp + (end_temp - start_temp) * time / d_time;
-      //   const double prob = std::exp((pre_get_time - get_time) / temp);
-      //   if(get_time < best_get_time)
-      //   {
-      //     best_v = v;
-      //     best_get_time = get_time;
-      //     pre_get_time = get_time;
-      //   }
-      //   else if(prob < (double)(xor64() % inf) / (double)inf)
-      //   {
-      //     std::swap(v[id1], v[id2]);
-      //   }
-      //   else
-      //   {
-      //     pre_get_time = get_time;
-      //   }
-      // }
-    }
-    // if(not climing)
-    //   std::swap(v, best_v);
-  };
-  annealing(pbase, 1800, true);
-  {
-    while((int)res.size() < ALL)
-    {
-      for (const auto &[l, r] : pbase)
+      else
       {
-        if(r >= 0)
+        const double temp = start_temp + (end_temp - start_temp) * time / d_time;
+        const double prob = std::exp((pre_get_time - get_time) / temp);
+        if(get_time < best_get_time)
         {
-          if(pn[l][r] > 0)
-          {
-            res.emplace_back(l);
-            res.emplace_back(r);
-            pn[l][r] -= 1;
-          }
+          best_v = v;
+          best_get_time = get_time;
+          pre_get_time = get_time;
+        }
+        else if(prob < (double)(xor64() % inf) / (double)inf)
+        {
+          std::swap(v[id1], v[id2]);
         }
         else
         {
-          if(n[l] > 0)
+          pre_get_time = get_time;
+        }
+      }
+    }
+    if(not climing)
+      std::swap(v, best_v);
+  };
+  {
+    int s = std::min_element(n.begin(), n.end()) - n.begin();
+    res.emplace_back(s);
+    n[s] -= 1;
+    while((int)res.size() < ALL)
+    {
+      int min_loss = inf;
+      double max_par = 0;
+      int id = -1;
+      for (int i = 0; i < m; ++i)
+      {
+        if(n[i] > 0)
+        {
+          if(chmin(min_loss, pair_loss[s][i]))
           {
-            n[l] -= 1;
-            res.emplace_back(l);
+            max_par = (double)n[i] / (double)inin[i];
+            id = i;
+          }
+          else if(min_loss == pair_loss[s][i])
+          {
+            if(chmax(max_par, (double)n[i] / (double)inin[i]))
+            {
+              id = i;
+            }
           }
         }
       }
+      res.emplace_back(id);
+      s = id;
+      n[id] -= 1;
     }
   }
   auto [bs, bc] = run(res);
