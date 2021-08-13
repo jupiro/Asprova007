@@ -54,7 +54,7 @@ void solve()
   const int ALL = std::accumulate(n.begin(), n.end(), 0);
   std::vector<std::deque<KKT89>> vq(S);
   std::vector<int> exe_idx(S), cnt(m), loss(m);
-  auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<int, int>
+  auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<double, int>
   {
     int real_time = 0;
     int run_time = 0;
@@ -157,7 +157,7 @@ void solve()
     double score = 0;
     for (int i = 0; i < m; ++i)
     {
-      score += std::sqrt((double)cnt[i] / (double)n[i]);
+      score += std::sqrt((double)cnt[i] / (double)inin[i]);
     }
     score /= m;
     return std::make_pair(score, done);
@@ -187,10 +187,9 @@ void solve()
   auto annealing = [&](std::vector<int> &v, double d_time = 800, bool climing = false, double start_temp = 1000, double end_temp = 0.01)
   {
     auto start = std::chrono::system_clock::now();
-    // int best_get_time = run(v, true).second;
+    auto [best_get_score, best_c] = run(v);
     // int pre_get_time = best_get_time;
     // auto best_v = v;
-    std::vector<int> v1, v2;
     int id[2] = {};
     for (int jupi_loves_kkt = 0;; ++jupi_loves_kkt)
     {
@@ -198,24 +197,24 @@ void solve()
       const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
       if(time > d_time)
         break;
-      id[0] = xor64() % (int)v.size();
+      id[0] = xor64() % (int)best_c;
       id[1] = xor64() % (int)v.size();
-      if(id[0] == 0 or id[1] == 0 or id[0] + 1 == (int)v.size() or id[1] + 1 == (int)v.size())
-        continue;
-      int diff_time = 0;
-      for (int i = 0; i < 2; ++i)
+      if(best_c < ALL)
       {
-        const int X = v[id[i] - 1];
-        const int Y1 = v[id[i]];
-        const int Y2 = v[id[i ^ 1]];
-        const int Z = v[id[i] + 1];
-        diff_time += pair_loss[X][Y2][Z] - pair_loss[X][Y2][Z];
+        id[1] = xor64() % ((int)v.size() - best_c) + best_c;
       }
+      std::swap(v[id[0]], v[id[1]]);
+      auto [get_score, get_c] = run(v);
       if(climing)
       {
-        if(diff_time < 0)
+        if(get_score < best_get_score)
         {
           std::swap(v[id[0]], v[id[1]]);
+        }
+        else
+        {
+          best_get_score = get_score;
+          best_c = get_c;
         }
       }
       // else
@@ -279,7 +278,83 @@ void solve()
   }
   // annealing(res, 1400, true);
   auto [bs, bc] = run(res);
+  if(bs < 0.98)
+  {
+    auto pres = res;
+    auto pbs = bs;
+    auto pbc = bc;
+    res.clear();
+    n = inin;
+    {
+      int s1 = std::min_element(n.begin(), n.end()) - n.begin();
+      int s2 = std::max_element(n.begin(), n.end()) - n.begin();
+      res.emplace_back(s1);
+      res.emplace_back(s2);
+      n[s1] -= 1;
+      n[s2] -= 1;
+      while((int)res.size() < ALL)
+      {
+        int min_loss = inf;
+        double max_par = 0;
+        int id = -1;
+        if((int)res.size() < 100)
+        {
+          for (int i = 0; i < m; ++i)
+          {
+            if(n[i] > 0)
+            {
+              if(chmin(min_loss, pair_loss[s1][s2][i]))
+              {
+                max_par = (double)n[i] / (double)inin[i];
+                id = i;
+              }
+              else if(min_loss == pair_loss[s1][s2][i])
+              {
+                if(chmax(max_par, (double)n[i] / (double)inin[i]))
+                {
+                  id = i;
+                }
+              }
+            }
+          }
+        }
+        else
+        {
+          for (int i = 0; i < m; ++i)
+          {
+            if(n[i] > 0)
+            {
+              chmin(min_loss, pair_loss[s1][s2][i]);
+            }
+          }
+          for (int i = 0; i < m; ++i)
+          {
+            if(n[i] > 0 and pair_loss[s1][s2][i] <= min_loss + 10)
+            {
+              if(chmax(max_par, (double)n[i] / (double)inin[i]))
+              {
+                id = i;
+              }
+            }
+          }
+        }
+        res.emplace_back(id);
+        s1 = s2;
+        s2 = id;
+        n[id] -= 1;
+      }
+    }
+    annealing(res, 1400, true);
+    std::tie(bs, bc) = run(res);
+    if(bs < pbs)
+    {
+      res = pres;
+      bs = pbs;
+      bc = pbc;
+    }
+  }
   res.resize(bc);
+  // cout << "bs:" << bs << endl;
   cout << res.size() << "\n";
   for (int i = 0; i < (int)res.size(); ++i)
   {
