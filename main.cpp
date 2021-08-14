@@ -385,65 +385,88 @@ auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<
   int bc = 0;
   if(m == 20)
     std::tie(bs, bc) = run(res);
-  if(m == 40 or bs < 0.98)
+  if(m == 40 or bs < 0.99)
   {
     auto pres = res;
     auto pbs = bs;
     auto pbc = bc;
-    res.clear();
-    std::vector<int> v;
-    int s1 = std::min_element(n.begin(), n.end()) - n.begin();
-    int s2 = std::max_element(n.begin(), n.end()) - n.begin();
-    v.emplace_back(s1);
-    v.emplace_back(s2);
-    res.emplace_back(s1);
-    res.emplace_back(s2);
-    std::vector<int> done_n(m);
-    std::vector<int> vloss(m);
-    done_n[s1] += 1;
-    done_n[s2] += 1;
-    while((int)res.size() < ALL)
+    if(bs < 1.0)
     {
-      int min_loss = inf;
-      int id = -1;
-      double max_par = 0.0;
-      vloss.clear();
-      vloss.resize(m, inf);
-      for (int i = 0; i < m; ++i)
+      res.clear();
+      std::vector<int> v;
+      int s1 = std::min_element(n.begin(), n.end()) - n.begin();
+      int s2 = std::max_element(n.begin(), n.end()) - n.begin();
+      v.emplace_back(s1);
+      v.emplace_back(s2);
+      res.emplace_back(s1);
+      res.emplace_back(s2);
+      std::vector<int> done_n(m);
+      std::vector<int> vloss(m);
+      done_n[s1] += 1;
+      done_n[s2] += 1;
+      double score = 0.0;
+      while((int)res.size() < ALL)
       {
-        if(done_n[i] < inin[i])
+        int min_loss = inf;
+        int id = -1;
+        double max_par = 0.0;
+        double max_score = 0.0;
+        vloss.clear();
+        vloss.resize(m, inf);
+        for (int i = 0; i < m; ++i)
         {
-          v.emplace_back(i);
-          vloss[i] = run_short(v);
-          chmin(min_loss, vloss[i]);
-          v.pop_back();
-        }
-      }
-
-      for (int i = 0; i < m; ++i)
-      {
-        if(n[i] > 0 and vloss[i] <= min_loss + 10)
-        {
-          if(chmax(max_par, (double)(inin[i] - done_n[i]) / (double)inin[i]))
+          if(done_n[i] < inin[i])
           {
-            id = i;
+            v.emplace_back(i);
+            vloss[i] = run_short(v);
+            chmin(min_loss, vloss[i]);
+            v.pop_back();
           }
         }
+
+        for (int i = 0; i < m; ++i)
+        {
+          if(done_n[i] == inin[i])
+            continue;
+          if((int)res.size() <= 300)
+          {
+            if(vloss[i] <= min_loss + 10)
+            {
+              if(chmax(max_par, (double)(inin[i] - done_n[i]) / (double)inin[i]))
+              {
+                id = i;
+              }
+            }
+          }
+          else
+          {
+            double nscore = score;
+            nscore -= std::sqrt((double)done_n[i] / inin[i]);
+            nscore += std::sqrt((double)(done_n[i] + 1) / inin[i]);
+            if(vloss[i] <= min_loss + 10)
+            {
+              if(chmax(max_score, nscore))
+              {
+                id = i;
+              }
+            }
+          }
+        }
+        if(m == 20)
+        {
+          if((int)v.size() >= 6)
+            v.erase(v.begin());
+          v.emplace_back(id);
+        }
+        else
+        {
+          if((int)v.size() >= 3)
+            v.erase(v.begin());
+          v.emplace_back(id);
+        }
+        res.emplace_back(id);
+        done_n[id] += 1;
       }
-      if(m == 20)
-      {
-        if((int)v.size() >= 4)
-          v.erase(v.begin());
-        v.emplace_back(id);
-      }
-      else
-      {
-        if((int)v.size() >= 3)
-          v.erase(v.begin());
-        v.emplace_back(id);
-      }
-      res.emplace_back(id);
-      done_n[id] += 1;
     }
     annealing(res);
     std::tie(bs, bc) = run(res);
