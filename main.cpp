@@ -53,7 +53,7 @@ void solve()
   const int ALL = std::accumulate(n.begin(), n.end(), 0);
   std::vector<std::deque<KKT89>> vq(S);
   std::vector<int> exe_idx(S), cnt(m), loss(m), use_id, next_erase, next_add, next_use;
-auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<double, int>
+  auto run = [&](const std::vector<int> &v)->std::pair<double, int>
   {
     int real_time = 0;
     int run_time = 0;
@@ -149,16 +149,16 @@ auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<
         }
       }
     }
-    if(get_losstime)
-    {
-      return std::make_pair(0.0, real_time - run_time);
-    }
     double score = 0;
     for (int i = 0; i < m; ++i)
     {
       score += std::sqrt((double)cnt[i] / (double)inin[i]);
     }
     score /= m;
+    if(done == 1000)
+    {
+      score = 2.0 - (double)real_time / L;
+    }
     return std::make_pair(score, done);
   };
 
@@ -298,29 +298,81 @@ auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<
   std::vector<int> base;
   std::vector triple_loss(m, std::vector(m, std::vector<int>(m, inf)));
   std::vector pair_loss(m, std::vector(m, inf));
-  if(m == 20)
+  // {
+  //   std::vector<int> v;
+  //   for (int i = 0; i < m; ++i)
+  //   {
+  //     v.emplace_back(i);
+  //     for (int j = 0; j < m; ++j)
+  //     {
+  //       v.emplace_back(j);
+  //       pair_loss[i][j] = run_short(v);
+  //       v.pop_back();
+  //     }
+  //     v.pop_back();
+  //   }
+  // }
   {
     std::vector<int> v;
     int s1 = std::min_element(n.begin(), n.end()) - n.begin();
-    int s2 = std::max_element(n.begin(), n.end()) - n.begin();
+    int s2 = -1;
     v.emplace_back(s1);
-    v.emplace_back(s2);
     res.emplace_back(s1);
-    res.emplace_back(s2);
     std::vector<int> done_n(m);
     done_n[s1] += 1;
+    {
+      int min_loss = inf;
+      int min_n = inf;
+      for (int i = 0; i < m; ++i)
+      {
+        if(done_n[i] == n[i])
+          continue;
+        v.emplace_back(i);
+        const int loss = run_short(v);
+        v.pop_back();
+        if(chmin(min_loss, loss))
+        {
+          s2 = i;
+          min_n = n[i];
+        }
+        else if(min_loss == loss)
+        {
+          if(chmin(min_n, n[i]))
+          {
+            s2 = i;
+          }
+        }
+      }
+    }
+    v.emplace_back(s2);
+    res.emplace_back(s2);
     done_n[s2] += 1;
     while((int)res.size() < ALL)
     {
       int min_loss = inf;
       int id = -1;
       double max_par = 0.0;
+      int loss = 0;
       for (int i = 0; i < m; ++i)
       {
         if(done_n[i] < inin[i])
         {
           v.emplace_back(i);
-          const int loss = run_short(v);
+          if(m == 20)
+            loss = run_short(v);
+          else
+          {
+            if((int)v.size() != 3)
+              assert(false);
+            if(triple_loss[v[0]][v[1]][v[2]] != inf)
+            {
+              loss = triple_loss[v[0]][v[1]][v[2]];
+            }
+            else
+            {
+              loss = triple_loss[v[0]][v[1]][v[2]] = run_short(v);
+            }
+          }
           v.pop_back();
           if(chmin(min_loss, loss))
           {
@@ -344,14 +396,15 @@ auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<
       }
       else
       {
-        if((int)v.size() >= 3)
+        if((int)v.size() >= 2)
           v.erase(v.begin());
       }
       v.emplace_back(id);
       done_n[id] += 1;
     }
   }
-  auto annealing = [&](std::vector<int> &v, double end_time = 1800)
+
+  auto annealing = [&](std::vector<int> &v, double end_time = 1750)
   {
     auto [best_get_score, best_c] = run(v);
 
@@ -383,33 +436,54 @@ auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<
   };
   double bs = 0.0;
   int bc = 0;
-  if(m == 20)
-    std::tie(bs, bc) = run(res);
-  if(m == 40 or bs < 0.99)
+  std::tie(bs, bc) = run(res);
+  if(bc < 1000)
   {
     auto pres = res;
     auto pbs = bs;
     auto pbc = bc;
-    if(bs < 1.0)
     {
       res.clear();
       std::vector<int> v;
       int s1 = std::min_element(n.begin(), n.end()) - n.begin();
-      int s2 = std::max_element(n.begin(), n.end()) - n.begin();
+      int s2 = -1;
       v.emplace_back(s1);
-      v.emplace_back(s2);
       res.emplace_back(s1);
-      res.emplace_back(s2);
       std::vector<int> done_n(m);
-      std::vector<int> vloss(m);
       done_n[s1] += 1;
+      {
+        int min_loss = inf;
+        int min_n = inf;
+        for (int i = 0; i < m; ++i)
+        {
+          if(done_n[i] == n[i])
+            continue;
+          v.emplace_back(i);
+          const int loss = run_short(v);
+          v.pop_back();
+          if(chmin(min_loss, loss))
+          {
+            s2 = i;
+            min_n = n[i];
+          }
+          else if(min_loss == loss)
+          {
+            if(chmin(min_n, n[i]))
+            {
+              s2 = i;
+            }
+          }
+        }
+      }
+      v.emplace_back(s2);
+      res.emplace_back(s2);
       done_n[s2] += 1;
+      std::vector<int> vloss(m);
       double score = 0.0;
       while((int)res.size() < ALL)
       {
         int min_loss = inf;
         int id = -1;
-        double max_par = 0.0;
         double max_score = 0.0;
         vloss.clear();
         vloss.resize(m, inf);
@@ -428,22 +502,14 @@ auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<
         {
           if(done_n[i] == inin[i])
             continue;
-          if((int)res.size() <= 300)
-          {
-            if(vloss[i] <= min_loss + 10)
-            {
-              if(chmax(max_par, (double)(inin[i] - done_n[i]) / (double)inin[i]))
-              {
-                id = i;
-              }
-            }
-          }
-          else
           {
             double nscore = score;
             nscore -= std::sqrt((double)done_n[i] / inin[i]);
             nscore += std::sqrt((double)(done_n[i] + 1) / inin[i]);
-            if(vloss[i] <= min_loss + 10)
+            int lm = 5;
+            if(m == 20 and bs < 0.93)
+              lm = 30;
+            if(vloss[i] <= min_loss + lm)
             {
               if(chmax(max_score, nscore))
               {
@@ -476,6 +542,10 @@ auto run = [&](const std::vector<int> &v, bool get_losstime = false)->std::pair<
       bs = pbs;
       bc = pbc;
     }
+  }
+  else
+  {
+    annealing(res);
   }
   res.resize(bc);
   cout << res.size() << "\n";
