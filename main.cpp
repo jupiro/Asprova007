@@ -278,7 +278,7 @@ void solve()
         }
       }
       std::sort(next_erase.begin(), next_erase.end());
-      std::sort(next_add.begin(), next_add.end());
+      // std::sort(next_add.begin(), next_add.end());
       for (const auto &e : use_id)
       {
         if(not std::binary_search(next_erase.begin(), next_erase.end(), e))
@@ -298,20 +298,6 @@ void solve()
   std::vector<int> base;
   std::vector triple_loss(m, std::vector(m, std::vector<int>(m, inf)));
   std::vector pair_loss(m, std::vector(m, inf));
-  // {
-  //   std::vector<int> v;
-  //   for (int i = 0; i < m; ++i)
-  //   {
-  //     v.emplace_back(i);
-  //     for (int j = 0; j < m; ++j)
-  //     {
-  //       v.emplace_back(j);
-  //       pair_loss[i][j] = run_short(v);
-  //       v.pop_back();
-  //     }
-  //     v.pop_back();
-  //   }
-  // }
   {
     std::vector<int> v;
     int s1 = std::min_element(n.begin(), n.end()) - n.begin();
@@ -506,9 +492,13 @@ void solve()
             double nscore = score;
             nscore -= std::sqrt((double)done_n[i] / inin[i]);
             nscore += std::sqrt((double)(done_n[i] + 1) / inin[i]);
-            int lm = 5;
-            if(m == 20 and bs < 0.93)
-              lm = 30;
+            int lm = 10;
+            if(m == 20 and bs < 0.94)
+              lm = 20;
+            if(m == 40)
+              lm = 3;
+            if(m == 40 and bs < 0.90)
+              lm = 20;
             if(vloss[i] <= min_loss + lm)
             {
               if(chmax(max_score, nscore))
