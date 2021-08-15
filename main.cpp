@@ -524,6 +524,8 @@ void solve()
         done_n[id] += 1;
       }
     }
+    auto end = std::chrono::system_clock::now();
+    const double time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
     annealing(res);
     std::tie(bs, bc) = run(res);
     if(bs < pbs)
