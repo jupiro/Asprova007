@@ -3,8 +3,8 @@ https://atcoder.jp/contests/asprocon7
 
 # 結果
 pretest 100 ケース 98,027,620 (順位 : 27 位)
-systemtest 1000 ケース 982,098,992 (順位：29 位)
 
+systemtest 1000 ケース 982,098,992 (順位：29 位)
 
 # 解法
 
