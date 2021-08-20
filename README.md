@@ -1,5 +1,6 @@
 # Asprova007
 https://atcoder.jp/contests/asprocon7
+[問題pdf](https://drive.google.com/file/d/1jHL8TpRgHAuNHonAT8h3X5wOB9k46gCX/view)
 
 # 結果
 pretest 100 ケース 98,027,620 (順位 : 27 位)
